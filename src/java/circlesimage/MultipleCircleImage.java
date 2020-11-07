@@ -166,7 +166,7 @@ public class MultipleCircleImage extends AbstractGame {
 
     @Override
     public void initialize(GameContainer gameContainer) {
-        background = new Image("/universe.jpg");
+        background = new Image("/david.jpg");
         circles = buildRandomCircleImageArray(gameContainer, MIN_CIRCLES);
         diedCircles = new ArrayList<>();
         calculateCirclesScore();
