@@ -1,0 +1,11 @@
+screen dimensions
+width 540
+height 360
+scale 2
+
+parameters
+min-circles 20
+max-initial-circles 500
+num-circles-increment 10
+num-babies-by-circle 3
+penalty-proximity 0.001

@@ -6,9 +6,14 @@ import engine.gfx.HexColors;
 import engine.gfx.Renderer;
 import engine.gfx.images.Image;
 import engine.vectors.points2d.Vec2df;
+import engine.vectors.points2d.Vec2di;
 import engine.vectors.points3d.Vec3di;
 
 import java.awt.event.KeyEvent;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -22,34 +27,15 @@ import java.util.Comparator;
 public class MultipleCircleImage extends AbstractGame {
 
     /**
-     * The screen dimensions: 540 width | 360 height | 2 scale
+     * The screen dimensions
+     * By default 540 width | 360 height | 2 scale
      */
     private static final Vec3di screenDimensions = new Vec3di(540, 360, 2);
-
-    /**
-     * The num of circles to add each time
-     */
-    private final int NUM_CIRCLES_INCREMENT = 10;
-
-    /**
-     * Minimum number of circles
-     */
-    private final int MIN_CIRCLES = 20;
-
-    /**
-     * The number of babies what has each circle
-     */
-    private final int NUM_BABIES_BY_CIRCLE = 3;
 
     /**
      * The decrease of the alpha channel each time
      */
     private final int ALPHA_DECREASE = 5;
-
-    /**
-     * The penalty for proximity
-     */
-    private final double PENALTY_PROXIMITY = 0.001f;
 
     /**
      * The circles on screen what can have babies
@@ -77,9 +63,32 @@ public class MultipleCircleImage extends AbstractGame {
     private Image background;
 
     /**
-     * The maximum number circles what can have babies
+     * The maximum and minimum number circles what
+     * can have babies
+     * X = maximum, by default 500
+     * Y = minimum, by default 20
      */
-    private int maxCircles = 500;
+    private Vec2di circlesLimits = new Vec2di();
+
+    /**
+     * The num of circles to add each time
+     * By default 10
+     */
+    private int numCirclesIncrement;
+
+    /**
+     * The number of babies what has each circle
+     * By default 3
+     */
+    private int numBabiesByCircle;
+
+    /**
+     * The penalty proximity for the circles
+     * To prevent circles from stalling at one point,
+     * there is a proximity penalty
+     * By default 0.001
+     */
+    private double penaltyProximity;
 
     /**
      * A counter for the drawn circles of screen
@@ -127,6 +136,57 @@ public class MultipleCircleImage extends AbstractGame {
     }
 
     /**
+     * This method reads a text file (parameters.txt)
+     * and sets all the parameters of the program
+     */
+    private void readParameters() {
+        File file = new File("C:\\Users\\Sergio\\IdeaProjects\\engine-circlesimage\\parameters.txt");
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(file));
+
+            String line = br.readLine();
+
+            while ( line != null ) {
+
+                String[] splittedLine = line.split(" ");
+
+                if ( splittedLine[0].equalsIgnoreCase("width") ) {
+                    screenDimensions.setX(Integer.parseInt(splittedLine[1]));
+                }
+                if ( splittedLine[0].equalsIgnoreCase("height") ) {
+                    screenDimensions.setY(Integer.parseInt(splittedLine[1]));
+                }
+                if ( splittedLine[0].equalsIgnoreCase("scale") ) {
+                    screenDimensions.setZ(Integer.parseInt(splittedLine[1]));
+                }
+
+                if ( splittedLine[0].equalsIgnoreCase("max-initial-circles") ) {
+                    circlesLimits.setX(Integer.parseInt(splittedLine[1]));
+                }
+                if ( splittedLine[0].equalsIgnoreCase("min-circles") ) {
+                    circlesLimits.setY(Integer.parseInt(splittedLine[1]));
+                }
+
+                if ( splittedLine[0].equalsIgnoreCase("num-circles-increment") ) {
+                    numCirclesIncrement = Integer.parseInt(splittedLine[1]);
+                }
+                if ( splittedLine[0].equalsIgnoreCase("num-babies-by-circle") ) {
+                    numBabiesByCircle = Integer.parseInt(splittedLine[1]);
+                }
+                if ( splittedLine[0].equalsIgnoreCase("penalty-proximity") ) {
+                    penaltyProximity = Double.parseDouble(splittedLine[1]);
+                }
+
+                line = br.readLine();
+            }
+
+        } catch ( IOException e ) {
+            System.out.println("The file can't be read!");
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * This method builds a random circle image
      * @param gc the game container object
      * @return a new instance of random circle image
@@ -166,8 +226,9 @@ public class MultipleCircleImage extends AbstractGame {
 
     @Override
     public void initialize(GameContainer gameContainer) {
+        readParameters();
         background = new Image("/david.jpg");
-        circles = buildRandomCircleImageArray(gameContainer, MIN_CIRCLES);
+        circles = buildRandomCircleImageArray(gameContainer, circlesLimits.getY());
         diedCircles = new ArrayList<>();
         calculateCirclesScore();
         updateCirclesOverlap();
@@ -184,8 +245,8 @@ public class MultipleCircleImage extends AbstractGame {
                     float distance2 = calculateDistance2(c, t);
                     float sizes = 5 * (c.getSize() + t.getSize());
                     if ( distance2 <=  (sizes * sizes) ) {
-                        c.setScore(c.getScore() - PENALTY_PROXIMITY / 2);
-                        t.setScore(t.getScore() - PENALTY_PROXIMITY / 2);
+                        c.setScore(c.getScore() - penaltyProximity / 2);
+                        t.setScore(t.getScore() - penaltyProximity / 2);
                     }
                 }
             }
@@ -196,7 +257,7 @@ public class MultipleCircleImage extends AbstractGame {
      * This method kills the worst circles
      */
     private void killWorstCircles() {
-        while ( circles.size() > maxCircles) {
+        while ( circles.size() > circlesLimits.getX() ) {
             CircleImage c = circles.remove(0);
             c.getColor().setAlpha(c.getColor().getAlpha() - ALPHA_DECREASE);
             diedCircles.add(c);
@@ -211,7 +272,7 @@ public class MultipleCircleImage extends AbstractGame {
         ArrayList<CircleImage> circlesBabies = new ArrayList<>();
 
         for ( CircleImage c : circles ) {
-            for ( int i = 0; i < NUM_BABIES_BY_CIRCLE; i++ ) {
+            for (int i = 0; i < numBabiesByCircle; i++ ) {
                 CircleImage t = c.getBaby();
                 circlesBabies.add(t);
             }
@@ -328,7 +389,7 @@ public class MultipleCircleImage extends AbstractGame {
      */
     private void updateUserInput(GameContainer gc) {
         if ( gc.getInput().isKeyDown(KeyEvent.VK_SPACE) ) {
-            circles = buildRandomCircleImageArray(gc, MIN_CIRCLES);
+            circles = buildRandomCircleImageArray(gc, circlesLimits.getY());
             diedCircles.clear();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_B) ) {
@@ -338,12 +399,12 @@ public class MultipleCircleImage extends AbstractGame {
             isShowingCirclesScore = !isShowingCirclesScore;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_UP) ) {
-            maxCircles += NUM_CIRCLES_INCREMENT;
+            circlesLimits.addToX(numCirclesIncrement);
             isShowingText = true;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_DOWN) ) {
-            if ( maxCircles > 0 ) {
-                maxCircles -= NUM_CIRCLES_INCREMENT;
+            if ( circlesLimits.getX() > 0 ) {
+                circlesLimits.addToX(-numCirclesIncrement);
             }
             isShowingText = true;
         }
@@ -453,12 +514,29 @@ public class MultipleCircleImage extends AbstractGame {
      * @param isDrawingScore if the method has to draw the score of the circle
      */
     private void drawCircle(Renderer r, CircleImage c, boolean isDrawingScore) {
-        r.drawFillCircle((int)c.getPosition().getX(), (int)c.getPosition().getY(), (int)c.getSize(), c.getColor().getCode());
+        r.drawFillCircle(
+                (int)c.getPosition().getX(),
+                (int)c.getPosition().getY(),
+                (int)c.getSize(),
+                c.getColor().getCode()
+        );
+
         if ( isShowingBackgroundImage ) {
-            r.drawCircle((int) c.getPosition().getX(), (int) c.getPosition().getY(), (int) c.getSize(), HexColors.WHITE);
+            r.drawCircle(
+                    (int)c.getPosition().getX(),
+                    (int)c.getPosition().getY(),
+                    (int)c.getSize(),
+                    HexColors.WHITE
+            );
         }
+
         if ( isDrawingScore ) {
-            r.drawText(String.format("%.2f%%", c.getScore() * 100), (int) c.getPosition().getX(), (int) c.getPosition().getY(), HexColors.WHITE);
+            r.drawText(
+                    String.format("%.2f%%", c.getScore() * 100),
+                    (int)c.getPosition().getX(),
+                    (int)c.getPosition().getY(),
+                    HexColors.WHITE
+            );
         }
     }
 
