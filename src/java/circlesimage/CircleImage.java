@@ -4,8 +4,32 @@ import engine.vectors.points2d.Vec2df;
 import engine.gfx.images.Image;
 
 /**
- * This class is a representation of a Circle
+ * This class is a representation of a circle
  * which wants to copy an image
+ *
+ * This specie will have a highest score
+ * if the screen pixels which compose the circle
+ * are more similar in color to the pixels of the
+ * background image
+ * This capacity can be related with the natural
+ * mimicry or imitation
+ * Some living beings (this feature can be seen
+ * on animals and plants) imitate other
+ * living beings or their environment because
+ * this gives a benefit to them
+ *
+ * The individual has his own method to calculate
+ * the score it has with its own characteristics
+ *
+ * It has some "genes" which defines the
+ * phenotype's characteristics of the individual
+ * They are:
+ * - The size: the radius of the circle to be drawn on screen
+ * - The color: a four channel based color, red, green, blue and alpha
+ * - The position: a two dimensional vector which defines the x and y coordinates
+ *
+ * The features of the individual are inherit with
+ * some variations to its children
  *
  * @class CircleImage
  * @author Sergio Martí Torregrosa
@@ -134,32 +158,6 @@ public class CircleImage {
      */
     private int randomIntBetween(int max, int min) {
         return (int)((Math.random() * (max - min)) + min);
-    }
-
-    /**
-     * This method returns a new CircleImage with new "genes"
-     * inherits from its parent
-     * @return a new instance of the CircleImage with some differences with his parent
-     */
-    public CircleImage getBaby() {
-        float size = this.size + randomIntBetween(2, -2);
-
-        if ( size < MIN_SIZE ) {
-            size = MIN_SIZE;
-        }
-        if ( size > MAX_SIZE ) {
-            size = MAX_SIZE;
-        }
-
-        float x = position.getX() + randomIntBetween(10, -10);
-        float y = position.getY() + randomIntBetween(10, -10);
-
-        return new CircleImage(
-                0,
-                new Vec2df(x, y),
-                size,
-                color.getBabyColor(10, -10)
-        );
     }
 
     /////////////////////////////////////////////////////////////////////////////////

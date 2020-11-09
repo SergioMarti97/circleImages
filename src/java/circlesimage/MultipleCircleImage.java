@@ -5,7 +5,6 @@ import engine.GameContainer;
 import engine.gfx.HexColors;
 import engine.gfx.Renderer;
 import engine.gfx.images.Image;
-import engine.vectors.points2d.Vec2df;
 import engine.vectors.points2d.Vec2di;
 import engine.vectors.points3d.Vec3di;
 
@@ -19,6 +18,38 @@ import java.util.Comparator;
 
 /**
  * This class is the program
+ *
+ * This is not a genetic or evolutionary algorithm,
+ * it's only my first approach to this topics
+ *
+ * This program tries to simulate the evolution
+ * of distinct colonies composed of circles
+ * which differ in color, size and position
+ *
+ * To avoid some problems, it has been realized
+ * some particular adjustment. Like:
+ * - The individuals can move each other to avoid
+ * the colony get stuck in one point
+ * - The individuals have a penalty for proximity
+ * with other individuals. This penalty can be modified
+ * by the user on the program, or much better, on the
+ * parameters.txt file. By default, the penalty is
+ * 0.001 less score for close individuals
+ * - It not simulates the evolution theory at all.
+ * because in each update there only remains five hundred
+ * living circles with the highest score of all
+ * Evolution doesn't works like this, it's more
+ * complex an there are more factors to have in account.
+ * - To make more beautiful shapes, the are two circles
+ * arrays or two circles populations. The population
+ * of living circles and the population of die circles.
+ * The living circles can have children and they can
+ * move other circles. The died circles can have children
+ * and they remains in their spot. In each frame the
+ * chanel alpha of the died circles updates to make
+ * they more transparent, to finally disappear and
+ * then get removed. This allows more
+ * beautiful transition
  *
  * @class MultipleCircleImage
  * @author Sergio Martí Torregrosa
@@ -48,6 +79,11 @@ public class MultipleCircleImage extends AbstractGame {
     private ArrayList<CircleImage> diedCircles;
 
     /**
+     * The factory class which builds new circles
+     */
+    private CircleImageFactory factory;
+
+    /**
      * The text color
      */
     private CircleColor textColor = new CircleColor(HexColors.WHITE);
@@ -68,7 +104,7 @@ public class MultipleCircleImage extends AbstractGame {
      * X = maximum, by default 500
      * Y = minimum, by default 20
      */
-    private Vec2di circlesLimits = new Vec2di();
+    private Vec2di circlePopulationLimits = new Vec2di();
 
     /**
      * The num of circles to add each time
@@ -116,6 +152,12 @@ public class MultipleCircleImage extends AbstractGame {
     private boolean isShowingText = false;
 
     /**
+     * A flag for showing always texts
+     * By default, false
+     */
+    private boolean isShowingAlwaysText;
+
+    /**
      * The constructor of the application
      * @param title the title of the application. It will be showed on the main bar
      *              of the application
@@ -125,14 +167,72 @@ public class MultipleCircleImage extends AbstractGame {
     }
 
     /**
-     * This method returns a random int between the specified
-     * interval
-     * @param max the maximum value of the interval
-     * @param min the minimum value of the interval
-     * @return a random integer value
+     * This method sets the screen parameters extracted from the
+     * parameters.txt document
+     * @param splittedLine the splitted line with the information
      */
-    private int randomIntBetween(int max, int min) {
-        return (int)(Math.random() * (max - min)) + min;
+    private void setScreenParameters(String[] splittedLine) {
+        if ( splittedLine[0].equalsIgnoreCase("width") ) {
+            screenDimensions.setX(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("height") ) {
+            screenDimensions.setY(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("scale") ) {
+            screenDimensions.setZ(Integer.parseInt(splittedLine[1]));
+        }
+    }
+
+    /**
+     * This method sets the population parameters extracted from the
+     * parameters.txt document
+     * @param splittedLine the splitted line with the information
+     */
+    private void setPopulationParameters(String[] splittedLine) {
+        if ( splittedLine[0].equalsIgnoreCase("max-initial-circles") ) {
+            circlePopulationLimits.setX(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("min-circles") ) {
+            circlePopulationLimits.setY(Integer.parseInt(splittedLine[1]));
+        }
+
+        if ( splittedLine[0].equalsIgnoreCase("num-circles-increment") ) {
+            numCirclesIncrement = Integer.parseInt(splittedLine[1]);
+        }
+        if ( splittedLine[0].equalsIgnoreCase("num-babies-by-circle") ) {
+            numBabiesByCircle = Integer.parseInt(splittedLine[1]);
+        }
+        if ( splittedLine[0].equalsIgnoreCase("penalty-proximity") ) {
+            penaltyProximity = Double.parseDouble(splittedLine[1]);
+        }
+    }
+
+    /**
+     * This method sets the parameters of the CircleFactory
+     * @param splittedLine the splitted line with all information
+     */
+    private void setVariationCircleImages(String[] splittedLine) {
+        if ( splittedLine[0].equalsIgnoreCase("max-circle-size") ) {
+            factory.setMaxCircleSize(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("max-variation-size") ) {
+            factory.getVariationSize().setX(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("min-variation-size") ) {
+            factory.getVariationSize().setY(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("max-variation-position") ) {
+            factory.getVariationPosition().setX(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("min-variation-position") ) {
+            factory.getVariationPosition().setY(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("max-variation-position") ) {
+            factory.getVariationColor().setX(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("min-variation-position") ) {
+            factory.getVariationColor().setY(Integer.parseInt(splittedLine[1]));
+        }
     }
 
     /**
@@ -143,92 +243,33 @@ public class MultipleCircleImage extends AbstractGame {
         File file = new File("C:\\Users\\Sergio\\IdeaProjects\\engine-circlesimage\\parameters.txt");
         try {
             BufferedReader br = new BufferedReader(new FileReader(file));
-
             String line = br.readLine();
-
             while ( line != null ) {
-
                 String[] splittedLine = line.split(" ");
 
-                if ( splittedLine[0].equalsIgnoreCase("width") ) {
-                    screenDimensions.setX(Integer.parseInt(splittedLine[1]));
-                }
-                if ( splittedLine[0].equalsIgnoreCase("height") ) {
-                    screenDimensions.setY(Integer.parseInt(splittedLine[1]));
-                }
-                if ( splittedLine[0].equalsIgnoreCase("scale") ) {
-                    screenDimensions.setZ(Integer.parseInt(splittedLine[1]));
-                }
+                setScreenParameters(splittedLine);
+                setPopulationParameters(splittedLine);
+                setVariationCircleImages(splittedLine);
 
-                if ( splittedLine[0].equalsIgnoreCase("max-initial-circles") ) {
-                    circlesLimits.setX(Integer.parseInt(splittedLine[1]));
-                }
-                if ( splittedLine[0].equalsIgnoreCase("min-circles") ) {
-                    circlesLimits.setY(Integer.parseInt(splittedLine[1]));
-                }
-
-                if ( splittedLine[0].equalsIgnoreCase("num-circles-increment") ) {
-                    numCirclesIncrement = Integer.parseInt(splittedLine[1]);
-                }
-                if ( splittedLine[0].equalsIgnoreCase("num-babies-by-circle") ) {
-                    numBabiesByCircle = Integer.parseInt(splittedLine[1]);
-                }
-                if ( splittedLine[0].equalsIgnoreCase("penalty-proximity") ) {
-                    penaltyProximity = Double.parseDouble(splittedLine[1]);
+                if ( splittedLine[0].equalsIgnoreCase("show-texts-on-screen") ) {
+                    isShowingAlwaysText = splittedLine[1].equalsIgnoreCase("true");
                 }
 
                 line = br.readLine();
             }
-
+            br.close();
         } catch ( IOException e ) {
             System.out.println("The file can't be read!");
             e.printStackTrace();
         }
     }
 
-    /**
-     * This method builds a random circle image
-     * @param gc the game container object
-     * @return a new instance of random circle image
-     */
-    private CircleImage buildRandomCircleImage(GameContainer gc) {
-        return new CircleImage(
-                0,
-                new Vec2df(
-                        randomIntBetween(gc.getWidth(), 0),
-                        randomIntBetween(gc.getHeight(), 0)
-                ),
-                randomIntBetween(3, 1),
-                new CircleColor(
-                        randomIntBetween(255, 0),
-                        randomIntBetween(255, 0),
-                        randomIntBetween(255, 0),
-                        255
-                )
-        );
-    }
-
-    /**
-     * This method builds an array full of distinct CircleImages
-     * @param gc the game container object
-     * @param size the size of the array
-     * @return an array of circle images
-     */
-    private ArrayList<CircleImage> buildRandomCircleImageArray(GameContainer gc, int size) {
-        ArrayList<CircleImage> arrayList = new ArrayList<>();
-        for ( int i = 0; i < size; i++ ) {
-            CircleImage c = buildRandomCircleImage(gc);
-            c.setId(arrayList.size());
-            arrayList.add(c);
-        }
-        return arrayList;
-    }
-
     @Override
     public void initialize(GameContainer gameContainer) {
+        factory = new CircleImageFactory();
         readParameters();
         background = new Image("/david.jpg");
-        circles = buildRandomCircleImageArray(gameContainer, circlesLimits.getY());
+        circles = factory.buildRandomCircleImageArray(gameContainer, circlePopulationLimits.getY());
         diedCircles = new ArrayList<>();
         calculateCirclesScore();
         updateCirclesOverlap();
@@ -257,7 +298,7 @@ public class MultipleCircleImage extends AbstractGame {
      * This method kills the worst circles
      */
     private void killWorstCircles() {
-        while ( circles.size() > circlesLimits.getX() ) {
+        while ( circles.size() > circlePopulationLimits.getX() ) {
             CircleImage c = circles.remove(0);
             c.getColor().setAlpha(c.getColor().getAlpha() - ALPHA_DECREASE);
             diedCircles.add(c);
@@ -273,7 +314,7 @@ public class MultipleCircleImage extends AbstractGame {
 
         for ( CircleImage c : circles ) {
             for (int i = 0; i < numBabiesByCircle; i++ ) {
-                CircleImage t = c.getBaby();
+                CircleImage t = factory.buildBaby(c);
                 circlesBabies.add(t);
             }
         }
@@ -389,7 +430,7 @@ public class MultipleCircleImage extends AbstractGame {
      */
     private void updateUserInput(GameContainer gc) {
         if ( gc.getInput().isKeyDown(KeyEvent.VK_SPACE) ) {
-            circles = buildRandomCircleImageArray(gc, circlesLimits.getY());
+            circles = factory.buildRandomCircleImageArray(gc, circlePopulationLimits.getY());
             diedCircles.clear();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_B) ) {
@@ -399,12 +440,12 @@ public class MultipleCircleImage extends AbstractGame {
             isShowingCirclesScore = !isShowingCirclesScore;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_UP) ) {
-            circlesLimits.addToX(numCirclesIncrement);
+            circlePopulationLimits.addToX(numCirclesIncrement);
             isShowingText = true;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_DOWN) ) {
-            if ( circlesLimits.getX() > 0 ) {
-                circlesLimits.addToX(-numCirclesIncrement);
+            if ( circlePopulationLimits.getX() > 0 ) {
+                circlePopulationLimits.addToX(-numCirclesIncrement);
             }
             isShowingText = true;
         }
@@ -574,20 +615,34 @@ public class MultipleCircleImage extends AbstractGame {
      * @param r the renderer object with all drawing methods
      */
     private void drawTexts(Renderer r) {
-        if ( isShowingText ) {
-            r.drawFillRectangle(5, 5, 250, 55, textBoxColor.getCode());
-            r.drawRectangle(5, 5, 250, 55, textColor.getCode());
-            r.drawText("Num circles: " + circles.size(), 10, 10, textColor.getCode());
-            r.drawText("Num circles: " + numDrawnCircles, 10, 30, textColor.getCode());
-        }
+        r.drawFillRectangle(5, 5, 277, 55, textBoxColor.getCode());
+        r.drawRectangle(5, 5, 277, 55, textColor.getCode());
+        r.drawText("Num circles: " + circles.size(), 10, 10, textColor.getCode());
+        r.drawText("Drawn circles: " + numDrawnCircles, 10, 30, textColor.getCode());
         numDrawnCircles = 0;
+    }
+
+
+    /**
+     * This method shows the texts of the program,
+     * having in account the flags of showing texts
+     * @param r the renderer object with all drawing methods
+     */
+    private void showTexts(Renderer r) {
+        if ( isShowingAlwaysText ) {
+            drawTexts(r);
+        } else {
+            if ( isShowingText ) {
+                drawTexts(r);
+            }
+        }
     }
 
     @Override
     public void render(GameContainer gameContainer, Renderer renderer) {
         drawBackground(renderer);
         drawAllCircles(renderer, isShowingCirclesScore);
-        drawTexts(renderer);
+        showTexts(renderer);
     }
 
     /**

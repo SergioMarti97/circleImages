@@ -121,46 +121,6 @@ public class CircleColor {
         return  (similarityR + similarityG + similarityB) / 3.0;
     }
 
-    private int randomIntBetween(int max, int min) {
-        return (int)((Math.random() * (max - min)) + min);
-    }
-
-    /**
-     * This method encapsulates part of the code needed on the
-     * CircleImage's getBaby() method. It builds a new color a bit different
-     * compared to the instance of the CircleColor which calls the method
-     * @param maxVariation the maximum variation
-     * @param minVariation the minimum variation
-     * @return a new color what is little different
-     */
-    public CircleColor getBabyColor(int maxVariation, int minVariation) {
-        int newR = red + randomIntBetween(maxVariation, minVariation);
-        int newB = blue + randomIntBetween(maxVariation, minVariation);
-        int newG = green + randomIntBetween(maxVariation, minVariation);
-
-        if ( newR < 0 ) {
-            newR = 0;
-        }
-        if ( newG < 0 ) {
-            newG = 0;
-        }
-        if ( newB < 0 ) {
-            newB = 0;
-        }
-
-        if ( newR >= 255 ) {
-            newR = 255;
-        }
-        if ( newG >= 255 ) {
-            newG = 255;
-        }
-        if ( newB >= 255 ) {
-            newB = 255;
-        }
-
-        return new CircleColor(newR, newG, newB);
-    }
-
     public int getRed() {
         return red;
     }
