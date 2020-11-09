@@ -5,7 +5,6 @@ import engine.GameContainer;
 import engine.gfx.HexColors;
 import engine.gfx.Renderer;
 import engine.gfx.images.Image;
-import engine.vectors.points2d.Vec2di;
 import engine.vectors.points3d.Vec3di;
 
 import java.awt.event.KeyEvent;
@@ -14,7 +13,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 
 /**
  * This class is the program
@@ -29,24 +27,24 @@ import java.util.Comparator;
  * To avoid some problems, it has been realized
  * some particular adjustment. Like:
  * - The individuals can move each other to avoid
- * the colony get stuck in one point
+ * the colony to get stuck in one point
  * - The individuals have a penalty for proximity
  * with other individuals. This penalty can be modified
  * by the user on the program, or much better, on the
  * parameters.txt file. By default, the penalty is
  * 0.001 less score for close individuals
- * - It not simulates the evolution theory at all.
+ * - It doesn't simulate the evolution theory at all.
  * because in each update there only remains five hundred
- * living circles with the highest score of all
+ * living circles with the highest score of all.
  * Evolution doesn't works like this, it's more
  * complex an there are more factors to have in account.
  * - To make more beautiful shapes, the are two circles
- * arrays or two circles populations. The population
+ * arrays or two circles populations: the population
  * of living circles and the population of die circles.
  * The living circles can have children and they can
- * move other circles. The died circles can have children
- * and they remains in their spot. In each frame the
- * chanel alpha of the died circles updates to make
+ * move other circles. The died circles can't have children
+ * and they remain in their spot. In each frame the
+ * channel alpha of the died circles updates to make
  * they more transparent, to finally disappear and
  * then get removed. This allows more
  * beautiful transition
@@ -71,17 +69,12 @@ public class MultipleCircleImage extends AbstractGame {
     /**
      * The circles on screen what can have babies
      */
-    private ArrayList<CircleImage> circles;
+    private CircleImagePopulation population;
 
     /**
      * The died circles, they can't have babies
      */
     private ArrayList<CircleImage> diedCircles;
-
-    /**
-     * The factory class which builds new circles
-     */
-    private CircleImageFactory factory;
 
     /**
      * The text color
@@ -99,12 +92,12 @@ public class MultipleCircleImage extends AbstractGame {
     private Image background;
 
     /**
-     * The maximum and minimum number circles what
-     * can have babies
-     * X = maximum, by default 500
-     * Y = minimum, by default 20
+     * This renderer only takes in account the drawing of circles,
+     * and don't has in account the texts and the background image
+     * This is useful for compare the image made by the circles
+     * and the background image
      */
-    private Vec2di circlePopulationLimits = new Vec2di();
+    private Renderer populationRenderer;
 
     /**
      * The num of circles to add each time
@@ -113,28 +106,21 @@ public class MultipleCircleImage extends AbstractGame {
     private int numCirclesIncrement;
 
     /**
-     * The number of babies what has each circle
-     * By default 3
-     */
-    private int numBabiesByCircle;
-
-    /**
-     * The penalty proximity for the circles
-     * To prevent circles from stalling at one point,
-     * there is a proximity penalty
-     * By default 0.001
-     */
-    private double penaltyProximity;
-
-    /**
-     * A counter for the drawn circles of screen
-     */
-    private int numDrawnCircles = 0;
-
-    /**
      * The time between each update
      */
     private float time = 0;
+
+    /**
+     * This is the buffered Image composed
+     * by the circles
+     */
+    private int[] buffer;
+
+    /**
+     * The fitness what has the image conformed
+     * by the circles
+     */
+    private double fitnessImage = 0.0;
 
     /**
      * A flag for showing or not showing the background image
@@ -155,7 +141,7 @@ public class MultipleCircleImage extends AbstractGame {
      * A flag for showing always texts
      * By default, false
      */
-    private boolean isShowingAlwaysText;
+    private boolean isShowingAlwaysText = false;
 
     /**
      * The constructor of the application
@@ -190,20 +176,20 @@ public class MultipleCircleImage extends AbstractGame {
      */
     private void setPopulationParameters(String[] splittedLine) {
         if ( splittedLine[0].equalsIgnoreCase("max-initial-circles") ) {
-            circlePopulationLimits.setX(Integer.parseInt(splittedLine[1]));
+            population.getCirclePopulationLimits().setX(Integer.parseInt(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("min-circles") ) {
-            circlePopulationLimits.setY(Integer.parseInt(splittedLine[1]));
+            population.getCirclePopulationLimits().setY(Integer.parseInt(splittedLine[1]));
         }
 
         if ( splittedLine[0].equalsIgnoreCase("num-circles-increment") ) {
             numCirclesIncrement = Integer.parseInt(splittedLine[1]);
         }
         if ( splittedLine[0].equalsIgnoreCase("num-babies-by-circle") ) {
-            numBabiesByCircle = Integer.parseInt(splittedLine[1]);
+            population.setNumBabiesByCircle(Integer.parseInt(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("penalty-proximity") ) {
-            penaltyProximity = Double.parseDouble(splittedLine[1]);
+            population.setPenaltyProximity(Double.parseDouble(splittedLine[1]));
         }
     }
 
@@ -213,25 +199,25 @@ public class MultipleCircleImage extends AbstractGame {
      */
     private void setVariationCircleImages(String[] splittedLine) {
         if ( splittedLine[0].equalsIgnoreCase("max-circle-size") ) {
-            factory.setMaxCircleSize(Integer.parseInt(splittedLine[1]));
+            population.getFactory().setMaxCircleSize(Integer.parseInt(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("max-variation-size") ) {
-            factory.getVariationSize().setX(Integer.parseInt(splittedLine[1]));
+            population.getFactory().getVariationSize().setX(Integer.parseInt(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("min-variation-size") ) {
-            factory.getVariationSize().setY(Integer.parseInt(splittedLine[1]));
+            population.getFactory().getVariationSize().setY(Integer.parseInt(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("max-variation-position") ) {
-            factory.getVariationPosition().setX(Integer.parseInt(splittedLine[1]));
+            population.getFactory().getVariationPosition().setX(Integer.parseInt(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("min-variation-position") ) {
-            factory.getVariationPosition().setY(Integer.parseInt(splittedLine[1]));
+            population.getFactory().getVariationPosition().setY(Integer.parseInt(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("max-variation-position") ) {
-            factory.getVariationColor().setX(Integer.parseInt(splittedLine[1]));
+            population.getFactory().getVariationColor().setX(Integer.parseInt(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("min-variation-position") ) {
-            factory.getVariationColor().setY(Integer.parseInt(splittedLine[1]));
+            population.getFactory().getVariationColor().setY(Integer.parseInt(splittedLine[1]));
         }
     }
 
@@ -266,162 +252,34 @@ public class MultipleCircleImage extends AbstractGame {
 
     @Override
     public void initialize(GameContainer gameContainer) {
-        factory = new CircleImageFactory();
+        population = new CircleImagePopulation();
+        populationRenderer = new Renderer(gameContainer);
         readParameters();
         background = new Image("/david.jpg");
-        circles = factory.buildRandomCircleImageArray(gameContainer, circlePopulationLimits.getY());
+        buffer = populationRenderer.getP();
+        population.buildPopulation(gameContainer);
         diedCircles = new ArrayList<>();
-        calculateCirclesScore();
-        updateCirclesOverlap();
+        population.calculateCirclesScore(background);
+        population.updateStaticCollisions();
     }
 
     /**
-     * This method calculates the score for the circles
+     * This method calculates the fitness of the image
+     * conformed by the circles and the background
+     * @param back the background image
+     * @param front the buffer image created by the circles
+     * @return the fitness of the front image with the back image
      */
-    private void calculateCirclesScore() {
-        for ( CircleImage c : circles ) {
-            c.calculateScore(background);
-            for ( CircleImage t : circles ) {
-                if ( c.getId() != t.getId() ) {
-                    float distance2 = calculateDistance2(c, t);
-                    float sizes = 5 * (c.getSize() + t.getSize());
-                    if ( distance2 <=  (sizes * sizes) ) {
-                        c.setScore(c.getScore() - penaltyProximity / 2);
-                        t.setScore(t.getScore() - penaltyProximity / 2);
-                    }
-                }
-            }
+    private double calculateImageFitness(int[] back, int[] front) {
+        CircleColor b;
+        CircleColor f;
+        double fitness = 0.0;
+        for ( int i = 0; i < front.length; i++ ) {
+            b = new CircleColor(back[i]);
+            f = new CircleColor(front[i]);
+            fitness += f.getSimilarityAlphaAlso(b);
         }
-    }
-
-    /**
-     * This method kills the worst circles
-     */
-    private void killWorstCircles() {
-        while ( circles.size() > circlePopulationLimits.getX() ) {
-            CircleImage c = circles.remove(0);
-            c.getColor().setAlpha(c.getColor().getAlpha() - ALPHA_DECREASE);
-            diedCircles.add(c);
-        }
-    }
-
-    /**
-     * This method add the babies of the circles
-     * to the circles array
-     */
-    private void makeNewCircles() {
-        ArrayList<CircleImage> circlesBabies = new ArrayList<>();
-
-        for ( CircleImage c : circles ) {
-            for (int i = 0; i < numBabiesByCircle; i++ ) {
-                CircleImage t = factory.buildBaby(c);
-                circlesBabies.add(t);
-            }
-        }
-
-        circles.addAll(circlesBabies);
-
-        for ( int i = 0; i < circles.size(); i++ ) {
-            circles.get(i).setId(i);
-        }
-    }
-
-    /**
-     * This method manages the collision of the circles with the
-     * edges
-     * @param gc the game container object with the width and height
-     */
-    private void updateCirclesCollisionEdges(GameContainer gc) {
-        for ( CircleImage c : circles ) {
-            if ( c.getPosition().getX() - c.getSize() < 0 ) {
-                c.getPosition().setX(c.getSize());
-            }
-            if ( c.getPosition().getX() + c.getSize() >= gc.getWidth() ) {
-                c.getPosition().setX(gc.getWidth() - c.getSize());
-            }
-            if ( c.getPosition().getY() - c.getSize() < 0 ) {
-                c.getPosition().setY(c.getSize());
-            }
-            if ( c.getPosition().getY() + c.getSize() >= gc.getHeight() ) {
-                c.getPosition().setY(gc.getHeight() - c.getSize());
-            }
-        }
-    }
-
-    /**
-     * This method says if the two circles are overlap
-     * @param f the first circle
-     * @param s the second circle
-     * @return if the two circles are overlap
-     */
-    private boolean doCirclesOverlap(CircleImage f, CircleImage s) {
-        return Math.abs(
-                (f.getPosition().getX() - s.getPosition().getX()) * (f.getPosition().getX() - s.getPosition().getX()) +
-                (f.getPosition().getY() - s.getPosition().getY()) * (f.getPosition().getY() - s.getPosition().getY())
-        )
-                <= (f.getSize() + s.getSize()) * (f.getSize() + s.getSize());
-    }
-
-    /**
-     * This method calculates the square of the distance
-     * between to circles
-     * @param c the circle
-     * @param t the target circle
-     * @return the square of the distance between the two circles
-     */
-    private float calculateDistance2(CircleImage c, CircleImage t) {
-        return (c.getPosition().getX() - t.getPosition().getX()) * (c.getPosition().getX() - t.getPosition().getX()) +
-                (c.getPosition().getY() - t.getPosition().getY()) * (c.getPosition().getY() - t.getPosition().getY());
-    }
-
-    /**
-     * This method calculates the distance
-     * between to circles
-     * @param c the circle
-     * @param t the target circle
-     * @return the distance between the two circles
-     */
-    private float calculateDistance(CircleImage c, CircleImage t) {
-        return (float)Math.sqrt(calculateDistance2(c, t));
-    }
-
-    /**
-     * This manages the static collision between the circles specified on the
-     * parameters
-     * @param c the circle
-     * @param t the target circle
-     */
-    private void updateCircleTargetOverlap(CircleImage c, CircleImage t) {
-        if ( c.getId() != t.getId() ) {
-            if ( doCirclesOverlap(c, t) ) {
-
-                float dist = calculateDistance(c, t);
-
-                if ( dist <= 0 ) {
-                    dist = 1;
-                }
-
-                float overlap = (dist - c.getSize() - t.getSize());
-                float differenceX = c.getPosition().getX() - t.getPosition().getX();
-                float differenceY = c.getPosition().getY() - t.getPosition().getY();
-
-                c.getPosition().setX(c.getPosition().getX() - (overlap * differenceX / dist));
-                c.getPosition().setY(c.getPosition().getY() - (overlap * differenceY / dist));
-                t.getPosition().setX(t.getPosition().getX() + (overlap * differenceX / dist));
-                t.getPosition().setY(t.getPosition().getY() + (overlap * differenceY / dist));
-            }
-        }
-    }
-
-    /**
-     * This method updates the collisions between all circles
-     */
-    private void updateCirclesOverlap() {
-        for ( CircleImage c : circles ) {
-            for ( CircleImage t : circles ) {
-                updateCircleTargetOverlap(c, t);
-            }
-        }
+        return fitness / (double) front.length;
     }
 
     /**
@@ -430,7 +288,7 @@ public class MultipleCircleImage extends AbstractGame {
      */
     private void updateUserInput(GameContainer gc) {
         if ( gc.getInput().isKeyDown(KeyEvent.VK_SPACE) ) {
-            circles = factory.buildRandomCircleImageArray(gc, circlePopulationLimits.getY());
+            population.buildPopulation(gc);
             diedCircles.clear();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_B) ) {
@@ -440,12 +298,12 @@ public class MultipleCircleImage extends AbstractGame {
             isShowingCirclesScore = !isShowingCirclesScore;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_UP) ) {
-            circlePopulationLimits.addToX(numCirclesIncrement);
+            population.getCirclePopulationLimits().addToX(numCirclesIncrement);
             isShowingText = true;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_DOWN) ) {
-            if ( circlePopulationLimits.getX() > 0 ) {
-                circlePopulationLimits.addToX(-numCirclesIncrement);
+            if ( population.getCirclePopulationLimits().getX() > 0 ) {
+                population.getCirclePopulationLimits().addToX(-numCirclesIncrement);
             }
             isShowingText = true;
         }
@@ -460,30 +318,39 @@ public class MultipleCircleImage extends AbstractGame {
     private void updateBackgroundImage(GameContainer gc) {
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD1) ) {
             background = new Image("/colorSplash01.jpg");
+            buffer = background.getP();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD2) ) {
             background = new Image("/colorSplash02.jpg");
+            buffer = background.getP();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD3) ) {
             background = new Image("/dynastes_hercules.jpg");
+            buffer = background.getP();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD4) ) {
             background = new Image("/roses.jpg");
+            buffer = background.getP();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD5) ) {
             background = new Image("/stockPhoto01.jpg");
+            buffer = background.getP();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD6) ) {
             background = new Image("/stockPhoto02.jpg");
+            buffer = background.getP();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD7) ) {
             background = new Image("/stockPhoto03.jpg");
+            buffer = background.getP();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD8) ) {
             background = new Image("/stockPhoto04.jpg");
+            buffer = background.getP();
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD9) ) {
             background = new Image("/universe.jpg");
+            buffer = background.getP();
         }
     }
 
@@ -494,7 +361,7 @@ public class MultipleCircleImage extends AbstractGame {
      * is decreased until it reaches zero and then the
      * circle is removed from the array
      */
-    private void updateDieCircles() {
+    private void updateDiedCircles() {
         ArrayList<Integer> indexToRemove = new ArrayList<>();
         for ( int i = 0; i < diedCircles.size(); i++ ) {
             diedCircles.get(i).getColor().setAlpha(diedCircles.get(i).getColor().getAlpha() - ALPHA_DECREASE);
@@ -532,69 +399,32 @@ public class MultipleCircleImage extends AbstractGame {
 
         time += v;
         if ( time >= 0.15 ) {
-            makeNewCircles();
+            population.makeNewCircles();
             time -= 0.15;
         }
 
-        updateCirclesCollisionEdges(gameContainer);
-        updateCirclesOverlap();
+        population.updateEdgeCollision(gameContainer);
+        population.updateStaticCollisions();
 
-        calculateCirclesScore();
-        circles.sort(Comparator.comparingDouble(CircleImage::getScore));
-        killWorstCircles();
+        population.calculateCirclesScore(background);
+        diedCircles.addAll(population.killWorst());
 
-        updateDieCircles();
+        updateDiedCircles();
 
         updateColorText();
+
+        fitnessImage = calculateImageFitness(background.getP(), buffer);
+        buffer = populationRenderer.getP();
     }
 
     /**
-     * This method draws the circle on the parameter
+     * This method draws all circles, live circles and died circles
      * @param r the renderer object with all drawing methods
-     * @param c the circle to draw
-     * @param isDrawingScore if the method has to draw the score of the circle
      */
-    private void drawCircle(Renderer r, CircleImage c, boolean isDrawingScore) {
-        r.drawFillCircle(
-                (int)c.getPosition().getX(),
-                (int)c.getPosition().getY(),
-                (int)c.getSize(),
-                c.getColor().getCode()
-        );
-
-        if ( isShowingBackgroundImage ) {
-            r.drawCircle(
-                    (int)c.getPosition().getX(),
-                    (int)c.getPosition().getY(),
-                    (int)c.getSize(),
-                    HexColors.WHITE
-            );
-        }
-
-        if ( isDrawingScore ) {
-            r.drawText(
-                    String.format("%.2f%%", c.getScore() * 100),
-                    (int)c.getPosition().getX(),
-                    (int)c.getPosition().getY(),
-                    HexColors.WHITE
-            );
-        }
-    }
-
-    /**
-     * This method draws all the circles (normal circles & die circles)
-     * @param r the renderer object with all drawing methods
-     * @param isDrawingScore if the method has to draw the score of the circles
-     */
-    private void drawAllCircles(Renderer r, boolean isDrawingScore) {
-        for ( CircleImage c : circles ) {
-            drawCircle(r, c, isDrawingScore);
-            numDrawnCircles++;
-        }
-
-        for ( CircleImage c : diedCircles ) {
-            drawCircle(r, c, false);
-            numDrawnCircles++;
+    private void drawAllCircles(Renderer r, boolean isShowingBackgroundImage, boolean isShowingCirclesScore) {
+        population.drawCircles(r, isShowingBackgroundImage, isShowingCirclesScore);
+        for ( CircleImage died : diedCircles ) {
+            died.drawYourSelf(r, isShowingBackgroundImage, isShowingCirclesScore);
         }
     }
 
@@ -615,13 +445,12 @@ public class MultipleCircleImage extends AbstractGame {
      * @param r the renderer object with all drawing methods
      */
     private void drawTexts(Renderer r) {
-        r.drawFillRectangle(5, 5, 277, 55, textBoxColor.getCode());
-        r.drawRectangle(5, 5, 277, 55, textColor.getCode());
-        r.drawText("Num circles: " + circles.size(), 10, 10, textColor.getCode());
-        r.drawText("Drawn circles: " + numDrawnCircles, 10, 30, textColor.getCode());
-        numDrawnCircles = 0;
+        r.drawFillRectangle(5, 5, 350, 75, textBoxColor.getCode());
+        r.drawRectangle(5, 5, 350, 75, textColor.getCode());
+        r.drawText("Circles alive: " + population.getCircles().size(), 10, 10, textColor.getCode());
+        r.drawText("Drawn circles: " + (population.getCircles().size() + diedCircles.size()), 10, 30, textColor.getCode());
+        r.drawText(String.format("Fitness average: %.3f%%", fitnessImage * 100), 10, 50, textColor.getCode());
     }
-
 
     /**
      * This method shows the texts of the program,
@@ -640,8 +469,9 @@ public class MultipleCircleImage extends AbstractGame {
 
     @Override
     public void render(GameContainer gameContainer, Renderer renderer) {
+        drawAllCircles(populationRenderer, false, false);
         drawBackground(renderer);
-        drawAllCircles(renderer, isShowingCirclesScore);
+        drawAllCircles(renderer, isShowingBackgroundImage, isShowingCirclesScore);
         showTexts(renderer);
     }
 

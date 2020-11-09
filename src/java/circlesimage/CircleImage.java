@@ -1,5 +1,7 @@
 package circlesimage;
 
+import engine.gfx.HexColors;
+import engine.gfx.Renderer;
 import engine.vectors.points2d.Vec2df;
 import engine.gfx.images.Image;
 
@@ -38,19 +40,14 @@ import engine.gfx.images.Image;
 public class CircleImage {
 
     /**
-     * The minimum size of the circle
-     */
-    private final int MIN_SIZE = 1;
-
-    /**
-     * The maximum size of the circle
-     */
-    private final int MAX_SIZE = 4;
-
-    /**
      * The identifier of the object
      */
     private int id;
+
+    /**
+     * The color of the circle
+     */
+    private CircleColor color;
 
     /**
      * The position where is the circle on screen
@@ -64,11 +61,6 @@ public class CircleImage {
      * than a simple circle
      */
     private float size;
-
-    /**
-     * The color of the circle
-     */
-    private CircleColor color;
 
     /**
      * The score is how much points
@@ -149,15 +141,36 @@ public class CircleImage {
     }
 
     /**
-     * This method gives a random integer value between the specified
-     * interval
-     * This auxiliary method is needed fot reduce the code complexity
-     * @param max the maximum value
-     * @param min the minimum value
-     * @return a random integer between the max and the min
+     * This method draws the circle on screen
+     * @param r the renderer object with all drawing methods
+     * @param isDrawingBorder if the method has to draw the border of the circle
+     * @param isDrawingScore if the method has to draw the score of the circle
      */
-    private int randomIntBetween(int max, int min) {
-        return (int)((Math.random() * (max - min)) + min);
+    public void drawYourSelf(Renderer r, boolean isDrawingBorder, boolean isDrawingScore) {
+        r.drawFillCircle(
+                (int)position.getX(),
+                (int)position.getY(),
+                (int)size,
+                color.getCode()
+        );
+
+        if ( isDrawingBorder ) {
+            r.drawCircle(
+                    (int)position.getX(),
+                    (int)position.getY(),
+                    (int)size,
+                    HexColors.WHITE
+            );
+        }
+
+        if ( isDrawingScore ) {
+            r.drawText(
+                    String.format("%.2f%%", score * 100),
+                    (int)position.getX(),
+                    (int)position.getY(),
+                    HexColors.WHITE
+            );
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////////////

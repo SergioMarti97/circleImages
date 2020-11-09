@@ -109,6 +109,7 @@ public class CircleColor {
     /**
      * This method also is really important, because
      * measures the similarity with other color
+     * It doesn't have in account the alpha channel
      * @param color the color to compare
      * @return the score which measures the similarity with the other color
      */
@@ -116,9 +117,24 @@ public class CircleColor {
         double similarityR = 1 - ((red - color.getRed()) * (red - color.getRed()) / (255.0 * 255.0));
         double similarityG = 1 - ((green - color.getGreen()) * (green - color.getGreen()) / (255.0 * 255.0));
         double similarityB = 1 - ((blue - color.getBlue()) * (blue - color.getBlue()) / (255.0 * 255.0));
-        double similarityA = 1 - ((alpha - color.getAlpha()) * (alpha - color.getAlpha()) / (255.0 * 255.0));
 
         return  (similarityR + similarityG + similarityB) / 3.0;
+    }
+
+    /**
+     * This method also is really important, because
+     * measures the similarity with other color
+     * It has in account the alpha channel
+     * @param color the color to compare
+     * @return the score which measures the similarity with the other color
+     */
+    public double getSimilarityAlphaAlso(CircleColor color) {
+        double similarityR = 1 - ((red - color.getRed()) * (red - color.getRed()) / (255.0 * 255.0));
+        double similarityG = 1 - ((green - color.getGreen()) * (green - color.getGreen()) / (255.0 * 255.0));
+        double similarityB = 1 - ((blue - color.getBlue()) * (blue - color.getBlue()) / (255.0 * 255.0));
+        double similarityA = 1 - ((alpha - color.getAlpha()) * (alpha - color.getAlpha()) / (255.0 * 255.0));
+
+        return  (similarityR + similarityG + similarityB + similarityA) / 4.0;
     }
 
     public int getRed() {
