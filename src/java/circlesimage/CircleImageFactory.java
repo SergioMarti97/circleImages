@@ -20,6 +20,12 @@ import java.util.ArrayList;
 public class CircleImageFactory {
 
     /**
+     * The minimum number of babies what can have a circle,
+     * by default 0
+     */
+    private final int MIN_NUM_BABIES = 0;
+
+    /**
      * The color limits, the maximum value is 255 and the
      * minimum value is 0
      */
@@ -33,25 +39,36 @@ public class CircleImageFactory {
     /**
      * The maximum limit for the size, 4
      */
-    private int maxCircleSize = 4;
+    private int maxCircleSize;
+
+    /**
+     * The maximum number of babies what can have
+     * a circle
+     */
+    private int maxNumBabies = 3;
 
     /**
      * The variation for the size
      */
-    private Vec2di variationSize = new Vec2di(2, -2);
+    private Vec2di variationSize;
 
     /**
      * The variation for the position
      */
-    private Vec2di variationPosition = new Vec2di(10, -10);
+    private Vec2di variationPosition;
 
     /**
      * The variation for the color, for all three channels
      */
-    private Vec2di variationColor = new Vec2di(10, -10);
+    private Vec2di variationColor;
 
+    /**
+     * Constructor
+     */
     public CircleImageFactory() {
-
+        variationSize = new Vec2di();
+        variationPosition = new Vec2di();
+        variationColor = new Vec2di();
     }
 
     /**
@@ -84,7 +101,8 @@ public class CircleImageFactory {
                         randomIntBetween(COLOR_LIMITS.getX(), COLOR_LIMITS.getY()),
                         randomIntBetween(COLOR_LIMITS.getX(), COLOR_LIMITS.getY()),
                         COLOR_LIMITS.getX()
-                )
+                ),
+                randomIntBetween(maxNumBabies, MIN_NUM_BABIES)
         );
     }
 
@@ -162,8 +180,23 @@ public class CircleImageFactory {
                 0,
                 new Vec2df(x, y),
                 size,
-                buildBabyColor(parent.getColor())
+                buildBabyColor(parent.getColor()),
+                randomIntBetween(maxNumBabies, MIN_NUM_BABIES)
         );
+    }
+
+    /**
+     * This method returns all the babies made from
+     * the parent
+     * @param parent the parent which is going to have babies
+     * @return all babies from the parent
+     */
+    public ArrayList<CircleImage> buildBabies(CircleImage parent) {
+        ArrayList<CircleImage> babies = new ArrayList<>();
+        for ( int i = 0; i < parent.getNumOfBabies(); i++ ) {
+            babies.add(buildBaby(parent));
+        }
+        return babies;
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -184,6 +217,10 @@ public class CircleImageFactory {
         return variationColor;
     }
 
+    public int getMaxNumBabies() {
+        return maxNumBabies;
+    }
+
     public void setMaxCircleSize(int maxCircleSize) {
         this.maxCircleSize = maxCircleSize;
     }
@@ -200,4 +237,13 @@ public class CircleImageFactory {
         this.variationColor = variationColor;
     }
 
+    public void setMaxNumBabies(int maxNumBabies) {
+        this.maxNumBabies = maxNumBabies;
+    }
+
+    @Override
+    public String toString() {
+        return "Max Circle size: " + maxCircleSize + " variation size " + variationSize
+                + " variation position " + variationPosition + " variation color " + variationColor;
+    }
 }

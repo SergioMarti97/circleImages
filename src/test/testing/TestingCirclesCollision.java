@@ -35,7 +35,8 @@ public class TestingCirclesCollision extends AbstractGame {
                         randomIntBetween(255, 0),
                         randomIntBetween(255, 0),
                         255
-                )
+                ),
+                0
         );
     }
 
