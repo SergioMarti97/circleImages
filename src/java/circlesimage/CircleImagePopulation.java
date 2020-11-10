@@ -6,9 +6,7 @@ import engine.gfx.images.Image;
 import engine.vectors.points2d.Vec2di;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.function.Predicate;
 
 /**
  * This class represents a population of CircleImages
@@ -22,10 +20,9 @@ import java.util.function.Predicate;
  */
 public class CircleImagePopulation {
 
-    /**
-     * The decrease of alpha channel each time
-     */
     private final int ALPHA_DECREASE = 5;
+
+    private final double MAKE_BABIES_CAP = 0.15;
 
     /**
      * The circles on screen what can have babies
@@ -33,15 +30,14 @@ public class CircleImagePopulation {
     private ArrayList<CircleImage> circles;
 
     /**
+     * The died circles, they can't have babies
+     */
+    private ArrayList<CircleImage> diedCircles;
+
+    /**
      * The factory class which builds new circles
      */
     private CircleImageFactory factory;
-
-    /**
-     * This is a counter for live and dead
-     * circles
-     */
-    private Vec2di liveDeadCount = new Vec2di();
 
     /**
      * The maximum and minimum number circles what
@@ -66,23 +62,17 @@ public class CircleImagePopulation {
     private int numBabiesByCircle;
 
     /**
-     * This field specifies how often the
-     * circles have babies
+     * A counter for the time, is for
+     * the make babies method
      */
-    private float updateCapMakeNewBabies;
-
-    /**
-     * A counter of time, needed because
-     * the circles have babies in a specified
-     * intervals of time
-     */
-    private float time = 0;
+    private float time = 0.0f;
 
     /**
      * Constructor
      */
     public CircleImagePopulation() {
         circles = new ArrayList<>();
+        diedCircles = new ArrayList<>();
         factory = new CircleImageFactory();
     }
 
@@ -94,82 +84,7 @@ public class CircleImagePopulation {
      */
     public void buildPopulation(GameContainer gc) {
         circles = factory.buildRandomCircleImageArray(gc, circlePopulationLimits.getY());
-        setIdToCircles();
-    }
-
-    /**
-     * This method sets the id to all circles
-     */
-    public void setIdToCircles() {
-        for ( int i = 0; i < circles.size(); i++ ) {
-            circles.get(i).setId(i);
-        }
-    }
-
-    /**
-     * This method calculates the score for the circle passed
-     * by parameter
-     * @param c the instance of CircleImage
-     * @param background the image of the background
-     */
-    private void calculateCircleScore(CircleImage c, Image background) {
-        c.calculateScore(background);
-        for ( CircleImage t : circles ) {
-            if ( !t.isDead() ) {
-                if ( c.getId() != t.getId() ) {
-                    float distance2 = calculateDistance2(c, t);
-                    float sizes = 5 * (c.getSize() + t.getSize());
-                    if ( distance2 <= (sizes * sizes) ) {
-                        c.setScore(c.getScore() - penaltyProximity / 2);
-                        t.setScore(t.getScore() - penaltyProximity / 2);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * This method calculates the score for the circles
-     * @param background the image of the background
-     */
-    public void calculateCirclesScore(Image background) {
-        for ( CircleImage c : circles ) {
-            if ( !c.isDead() ) {
-                calculateCircleScore(c, background);
-            }
-        }
-    }
-
-    /**
-     * This method sorts the population by the score of
-     * the individuals
-     */
-    public void sort() {
-        ArrayList<CircleImage> circlesAlive = new ArrayList<>();
-        for ( CircleImage c : circles ) {
-            if ( !c.isDead() ) {
-                circlesAlive.add(c);
-            }
-        }
-        circles.removeAll(circlesAlive);
-        circles.trimToSize();
-        circlesAlive.sort(Comparator.comparingDouble(CircleImage::getScore));
-        circles.addAll(circlesAlive);
-        //circles.sort(Collections.reverseOrder());
-    }
-
-    /**
-     * This method kills the worst circles
-     */
-    public void killWorst() {
-        sort();
-        if ( circles.size() > circlePopulationLimits.getX() ) {
-            for (int i = 0; i < circles.size() - circlePopulationLimits.getX(); i++) {
-                if (!circles.get(i).isDead()) {
-                    circles.get(i).setDead(true);
-                }
-            }
-        }
+        diedCircles.clear();
     }
 
     /**
@@ -179,45 +94,82 @@ public class CircleImagePopulation {
      * is decreased until it reaches zero and then the
      * circle is removed from the array
      */
-    public void updateDiedCircles() {
-        ArrayList<CircleImage> circlesToRemove = new ArrayList<>();
-        for (CircleImage circle : circles) {
-            if (circle.isDead()) {
-                circle.getColor().setAlpha(circle.getColor().getAlpha() - ALPHA_DECREASE);
-                if (circle.getColor().getAlpha() < ALPHA_DECREASE) {
-                    circlesToRemove.add(circle);
+    private void updateDiedCircles() {
+        ArrayList<Integer> indexToRemove = new ArrayList<>();
+        for ( int i = 0; i < diedCircles.size(); i++ ) {
+            diedCircles.get(i).getColor().setAlpha(diedCircles.get(i).getColor().getAlpha() - ALPHA_DECREASE);
+            if ( diedCircles.get(i).getColor().getAlpha() < ALPHA_DECREASE ) {
+                indexToRemove.add(i);
+            }
+        }
+        for ( Integer index : indexToRemove ) {
+            diedCircles.remove(index.intValue());
+        }
+    }
+
+    /**
+     * This method calculates the score for the circles
+     */
+    public void calculateCirclesScore(Image background) {
+        for ( CircleImage c : circles ) {
+            c.calculateScore(background);
+            for ( CircleImage t : circles ) {
+                if ( c.getId() != t.getId() ) {
+                    float distance2 = calculateDistance2(c, t);
+                    float sizes = 5 * (c.getSize() + t.getSize());
+                    if ( distance2 <=  (sizes * sizes) ) {
+                        c.setScore(c.getScore() - penaltyProximity / 2);
+                        t.setScore(t.getScore() - penaltyProximity / 2);
+                    }
                 }
             }
         }
-        circles.removeAll(circlesToRemove);
+    }
+
+    /**
+     * This method kills the worst circles
+     */
+    private void killWorst() {
+        ArrayList<CircleImage> diedCircles = new ArrayList<>();
+        circles.sort(Comparator.comparingDouble(CircleImage::getScore));
+        while ( circles.size() > circlePopulationLimits.getX() ) {
+            CircleImage c = circles.remove(0);
+            diedCircles.add(c);
+        }
+        this.diedCircles.addAll(diedCircles);
     }
 
     /**
      * This method add the babies of the circles
      * to the circles array
      */
-    private void makeNewCircles() {
+    private void makeBabies() {
         ArrayList<CircleImage> circlesBabies = new ArrayList<>();
 
         for ( CircleImage c : circles ) {
-            if ( !c.isDead() ) {
-                circlesBabies.addAll(factory.buildBabies(c));
+            for (int i = 0; i < numBabiesByCircle; i++ ) {
+                CircleImage t = factory.buildBaby(c);
+                circlesBabies.add(t);
             }
         }
 
         circles.addAll(circlesBabies);
+
+        for ( int i = 0; i < circles.size(); i++ ) {
+            circles.get(i).setId(i);
+        }
     }
 
     /**
-     * This method add babies of the circles to the
-     * circles array, each specified time interval
-     * @param elapsedTime the elapsed time between each frame
+     * This method has in account the update cap for
+     * have babies
+     * @param elapsedTime the time between two frames
      */
-    public void makeNewCircles(float elapsedTime) {
+    private void makeBabies(float elapsedTime) {
         time += elapsedTime;
-        if ( time >= updateCapMakeNewBabies ) {
-            makeNewCircles();
-            time -= updateCapMakeNewBabies;
+        if ( time >= MAKE_BABIES_CAP ) {
+            makeBabies();
+            time -= MAKE_BABIES_CAP;
         }
     }
 
@@ -227,16 +179,16 @@ public class CircleImagePopulation {
      * @param gc the game container object with the width and height
      */
     private void updateCircleEdgeCollision(GameContainer gc, CircleImage c) {
-        if (c.getPosition().getX() - c.getSize() < 0) {
+        if ( c.getPosition().getX() - c.getSize() < 0 ) {
             c.getPosition().setX(c.getSize());
         }
-        if (c.getPosition().getX() + c.getSize() >= gc.getWidth()) {
+        if ( c.getPosition().getX() + c.getSize() >= gc.getWidth() ) {
             c.getPosition().setX(gc.getWidth() - c.getSize());
         }
-        if (c.getPosition().getY() - c.getSize() < 0) {
+        if ( c.getPosition().getY() - c.getSize() < 0 ) {
             c.getPosition().setY(c.getSize());
         }
-        if (c.getPosition().getY() + c.getSize() >= gc.getHeight()) {
+        if ( c.getPosition().getY() + c.getSize() >= gc.getHeight() ) {
             c.getPosition().setY(gc.getHeight() - c.getSize());
         }
     }
@@ -248,8 +200,10 @@ public class CircleImagePopulation {
      * @return if the two circles are overlap
      */
     private boolean doCirclesOverlap(CircleImage f, CircleImage s) {
-        return Math.abs((f.getPosition().getX() - s.getPosition().getX()) * (f.getPosition().getX() - s.getPosition().getX()) +
-                        (f.getPosition().getY() - s.getPosition().getY()) * (f.getPosition().getY() - s.getPosition().getY()))
+        return Math.abs(
+                (f.getPosition().getX() - s.getPosition().getX()) * (f.getPosition().getX() - s.getPosition().getX()) +
+                        (f.getPosition().getY() - s.getPosition().getY()) * (f.getPosition().getY() - s.getPosition().getY())
+        )
                 <= (f.getSize() + s.getSize()) * (f.getSize() + s.getSize());
     }
 
@@ -283,147 +237,76 @@ public class CircleImagePopulation {
      * @param t the target circle
      */
     private void updateCircleTargetStaticCollision(CircleImage c, CircleImage t) {
-        if ( c.getId() != t.getId() && doCirclesOverlap(c, t) ) {
-            float dist = calculateDistance(c, t);
+        if ( c.getId() != t.getId() ) {
+            if ( doCirclesOverlap(c, t) ) {
 
-            if ( dist == 0 ) {
-                dist = 1;
+                float dist = calculateDistance(c, t);
+
+                if ( dist <= 0 ) {
+                    dist = 1;
+                }
+
+                float overlap = (dist - c.getSize() - t.getSize());
+                float differenceX = c.getPosition().getX() - t.getPosition().getX();
+                float differenceY = c.getPosition().getY() - t.getPosition().getY();
+
+                c.getPosition().setX(c.getPosition().getX() - (overlap * differenceX / dist));
+                c.getPosition().setY(c.getPosition().getY() - (overlap * differenceY / dist));
+                t.getPosition().setX(t.getPosition().getX() + (overlap * differenceX / dist));
+                t.getPosition().setY(t.getPosition().getY() + (overlap * differenceY / dist));
             }
-
-            float overlap = (dist - c.getSize() - t.getSize());
-            float differenceX = c.getPosition().getX() - t.getPosition().getX();
-            float differenceY = c.getPosition().getY() - t.getPosition().getY();
-
-            c.getPosition().setX(c.getPosition().getX() - (overlap * differenceX / dist));
-            c.getPosition().setY(c.getPosition().getY() - (overlap * differenceY / dist));
-            t.getPosition().setX(t.getPosition().getX() + (overlap * differenceX / dist));
-            t.getPosition().setY(t.getPosition().getY() + (overlap * differenceY / dist));
         }
     }
 
     /**
-     * This method calls the two methods:
-     * updateStaticCollisions & updateEdgeCollision
+     * This method updates the collisions between all circles
+     * and the edges of screen
+     * @param gc the game container object needed for manage the collisions
+     *           of the circles with the screen edges
      */
     public void updateCollisions(GameContainer gc) {
         for ( CircleImage c : circles ) {
-            if ( !c.isDead() ) {
-                updateCircleEdgeCollision(gc, c);
-
-                for ( CircleImage t : circles ) {
-                    if ( !t.isDead() ) {
-                        updateCircleTargetStaticCollision(c, t);
-                    }
-                }
-
+            updateCircleEdgeCollision(gc, c);
+            for ( CircleImage t : circles ) {
+                updateCircleTargetStaticCollision(c, t);
             }
         }
     }
 
     /**
-     * This method draws all the circles
+     * This method encapsulates all the sequence of
+     * methods what the population have to do for each frame
+     */
+    public void update(GameContainer gc, float elapsedTime, Image background) {
+        makeBabies(elapsedTime);
+        updateCollisions(gc);
+        calculateCirclesScore(background);
+        killWorst();
+        updateDiedCircles();
+    }
+
+    /**
+     * This method draws the circles
      * @param r the renderer object with all drawing methods
      * @param isDrawingScore if the method has to draw the score of the circles
-     * @param isDrawingBorder if the method has to draw the border of the circles
      */
-    public void drawAllCircles(Renderer r, boolean isDrawingBorder, boolean isDrawingScore) {
+    public void drawCircles(Renderer r, boolean isDrawingBorder, boolean isDrawingScore) {
         for ( CircleImage c : circles ) {
            c.drawYourSelf(r, isDrawingBorder, isDrawingScore);
         }
-    }
-
-    /**
-     * This method draws only the live circles
-     * @param r the renderer object with all drawing methods
-     * @param isDrawingScore if the method has to draw the score of the circles
-     * @param isDrawingBorder if the method has to draw the border of the circles
-     */
-    public void drawLiveCircles(Renderer r, boolean isDrawingBorder, boolean isDrawingScore) {
-        for ( CircleImage c : circles ) {
-            if ( !c.isDead() ) {
-                c.drawYourSelf(r, isDrawingBorder, isDrawingScore);
-            }
+        for ( CircleImage c : diedCircles ) {
+            c.drawYourSelf(r, isDrawingBorder, isDrawingScore);
         }
-    }
-
-    /**
-     * This method calculates the number of
-     * live circles and dead circles of the population
-     */
-    public void calculateLiveDeadCount() {
-        liveDeadCount = new Vec2di();
-        for ( CircleImage c : circles ) {
-            if ( !c.isDead() ) {
-                liveDeadCount.addToX(1);
-            } else {
-                liveDeadCount.addToY(1);
-            }
-        }
-    }
-
-    public void update(GameContainer gc, float elapsedTime, Image background) {
-
-        ArrayList<CircleImage> babies = new ArrayList<>();
-
-        liveDeadCount = new Vec2di(0, 0);
-
-        // sort the circles by the
-        sort();
-
-        if ( circles.size() > circlePopulationLimits.getX() ) {
-            for ( int i = 0; i < circles.size() - circlePopulationLimits.getX() - 1; i++ ) {
-                circles.get(i).setDead(true);
-            }
-        }
-
-        setIdToCircles();
-
-        for ( CircleImage c : circles ) {
-            if ( !c.isDead() ) {
-                // count
-                liveDeadCount.addToX(1);
-
-                // Physics
-                // Edge collisions:
-                updateCircleEdgeCollision(gc, c);
-
-                // static collisions:
-                for ( CircleImage t : circles ) {
-                    if ( !t.isDead() ) {
-                        updateCircleTargetStaticCollision(c, t);
-                    }
-                }
-
-                // Calculate score
-                calculateCircleScore(c, background);
-
-                // Make new circles
-                time += elapsedTime;
-                if ( time >= updateCapMakeNewBabies ) {
-                    babies.addAll(factory.buildBabies(c));
-                    time -= updateCapMakeNewBabies;
-                }
-
-            } else {
-                // count
-                liveDeadCount.addToY(1);
-
-                // Decrease the alpha channel
-                c.getColor().setAlpha(c.getColor().getAlpha() - ALPHA_DECREASE);
-            }
-        }
-
-        // Delete all circles what have less than ALPHA_DECREASE
-        circles.removeIf((CircleImage c)-> c.getColor().getAlpha() <= ALPHA_DECREASE);
-
-        circles.addAll(babies);
-
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     public ArrayList<CircleImage> getCircles() {
         return circles;
+    }
+
+    public ArrayList<CircleImage> getDiedCircles() {
+        return diedCircles;
     }
 
     public CircleImageFactory getFactory() {
@@ -442,24 +325,12 @@ public class CircleImagePopulation {
         return circlePopulationLimits;
     }
 
-    public float getUpdateCapMakeNewBabies() {
-        return updateCapMakeNewBabies;
-    }
-
-    public Vec2di getLiveDeadCount() {
-        return liveDeadCount;
-    }
-
-    public int getNumLiveCircles() {
-        return liveDeadCount.getX();
-    }
-
-    public int getNumDeadCircles() {
-        return liveDeadCount.getY();
-    }
-
     public void setCircles(ArrayList<CircleImage> circles) {
         this.circles = circles;
+    }
+
+    public void setDiedCircles(ArrayList<CircleImage> diedCircles) {
+        this.diedCircles = diedCircles;
     }
 
     public void setFactory(CircleImageFactory factory) {
@@ -476,17 +347,6 @@ public class CircleImagePopulation {
 
     public void setCirclePopulationLimits(Vec2di circlePopulationLimits) {
         this.circlePopulationLimits = circlePopulationLimits;
-    }
-
-    public void setUpdateCapMakeNewBabies(float updateCapMakeNewBabies) {
-        this.updateCapMakeNewBabies = updateCapMakeNewBabies;
-    }
-
-    @Override
-    public String toString() {
-        return "Num individuals: " + circles.size() + " factory [" + factory.toString()
-                + "] population limits " + circlePopulationLimits + " proximity penalty " + penaltyProximity
-                + " num babies by circle " + numBabiesByCircle + " update cap for make new babies " + updateCapMakeNewBabies;
     }
 
 }

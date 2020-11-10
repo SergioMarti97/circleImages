@@ -7,11 +7,9 @@ parameters
 min-circles 20
 max-initial-circles 500
 num-circles-increment 10
-penalty-proximity 0.001
-update-cap-make-babies 0.15
 num-babies-by-circle 3
+penalty-proximity 0.001
 
-circles variation
 max-circle-size 4
 max-variation-size 2
 min-variation-size -2

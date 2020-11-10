@@ -63,12 +63,6 @@ public class CircleImage {
     private float size;
 
     /**
-     * This is the num of babies what an
-     * individual can have
-     */
-    private int numOfBabies;
-
-    /**
      * The score is how much points
      * has this circle referred to
      * the similarity with the image
@@ -78,29 +72,17 @@ public class CircleImage {
     private double score = 0.0;
 
     /**
-     * A circle individual can be on
-     * two states: live or dead
-     * If it's live, the circle can have babies,
-     * else, the circle can't have babies,
-     * in each frame its alpha channel decrease
-     * and when it releases near to 0 it gets erased
-     * from the population
-     */
-    private boolean isDead = false;
-
-    /**
      * Constructor
      * @param id the identifier
      * @param position the position of the circle
      * @param size the size of the circle, the radius
      * @param color the color of the circle
      */
-    public CircleImage(int id, Vec2df position, float size, CircleColor color, int numOfBabies) {
+    public CircleImage(int id, Vec2df position, float size, CircleColor color) {
         this.id = id;
         this.position = position;
         this.size = size;
         this.color = color;
-        this.numOfBabies = numOfBabies;
     }
 
     /**
@@ -213,14 +195,6 @@ public class CircleImage {
         return score;
     }
 
-    public int getNumOfBabies() {
-        return numOfBabies;
-    }
-
-    public boolean isDead() {
-        return isDead;
-    }
-
     public void setId(int id) {
         this.id = id;
     }
@@ -241,17 +215,9 @@ public class CircleImage {
         this.score = score;
     }
 
-    public void setNumOfBabies(int numOfBabies) {
-        this.numOfBabies = numOfBabies;
-    }
-
-    public void setDead(boolean dead) {
-        isDead = dead;
-    }
-
     @Override
     public String toString() {
-        return "id:" + id + " position " + position + " size " + size + " color " + color + " live: " + (isDead ? "no" : "yes");
+        return "position " + position + " size " + size + " color " + color;
     }
 
 }

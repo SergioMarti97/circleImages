@@ -27,7 +27,7 @@ public class TestingCircleImage extends AbstractGame {
     public void initialize(GameContainer gameContainer) {
         backgroundImage = new Image("/dynastes_hercules.jpg");
         mousePosition = new Vec2df(gameContainer.getInput().getMouseX(), gameContainer.getInput().getMouseY());
-        circle = new CircleImage(0, mousePosition, 10, new CircleColor(0, 0, 0, 255), 0);
+        circle = new CircleImage(0, mousePosition, 10, new CircleColor(0, 0, 0, 255));
     }
 
     @Override
