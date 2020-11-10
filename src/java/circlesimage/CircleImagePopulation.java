@@ -20,9 +20,10 @@ import java.util.Comparator;
  */
 public class CircleImagePopulation {
 
+    /**
+     * The alpha decrease for the died circles
+     */
     private final int ALPHA_DECREASE = 5;
-
-    private final double MAKE_BABIES_CAP = 0.15;
 
     /**
      * The circles on screen what can have babies
@@ -60,6 +61,12 @@ public class CircleImagePopulation {
      * By default 3
      */
     private int numBabiesByCircle;
+
+    /**
+     * How often the circles can have babies
+     * By default 0.15 seconds
+     */
+    private double makeBabiesCap;
 
     /**
      * A counter for the time, is for
@@ -167,9 +174,9 @@ public class CircleImagePopulation {
      */
     private void makeBabies(float elapsedTime) {
         time += elapsedTime;
-        if ( time >= MAKE_BABIES_CAP ) {
+        if ( time >= makeBabiesCap) {
             makeBabies();
-            time -= MAKE_BABIES_CAP;
+            time -= makeBabiesCap;
         }
     }
 
@@ -321,6 +328,10 @@ public class CircleImagePopulation {
         return numBabiesByCircle;
     }
 
+    public double getMakeBabiesCap() {
+        return makeBabiesCap;
+    }
+
     public Vec2di getCirclePopulationLimits() {
         return circlePopulationLimits;
     }
@@ -343,6 +354,10 @@ public class CircleImagePopulation {
 
     public void setNumBabiesByCircle(int numBabiesByCircle) {
         this.numBabiesByCircle = numBabiesByCircle;
+    }
+
+    public void setMakeBabiesCap(double makeBabiesCap) {
+        this.makeBabiesCap = makeBabiesCap;
     }
 
     public void setCirclePopulationLimits(Vec2di circlePopulationLimits) {

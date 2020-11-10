@@ -8,8 +8,10 @@ min-circles 20
 max-initial-circles 500
 num-circles-increment 10
 num-babies-by-circle 3
+make-babies-cap 0.15
 penalty-proximity 0.001
 
+circle variation
 max-circle-size 4
 max-variation-size 2
 min-variation-size -2
@@ -18,4 +20,8 @@ min-variation-position -10
 max-variation-color 10
 min-variation-color -10
 
-show-texts-on-screen true
+program cosmetics
+text-color WHITE
+text-box-color BLACK
+text-box-stroke-color WHITE
+show-texts-on-screen FALSE

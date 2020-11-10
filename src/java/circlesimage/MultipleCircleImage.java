@@ -2,7 +2,6 @@ package circlesimage;
 
 import engine.AbstractGame;
 import engine.GameContainer;
-import engine.gfx.HexColors;
 import engine.gfx.Renderer;
 import engine.gfx.images.Image;
 import engine.vectors.points3d.Vec3di;
@@ -72,21 +71,6 @@ public class MultipleCircleImage extends AbstractGame {
     private CircleImagePopulation population;
 
     /**
-     * The text color
-     */
-    private CircleColor textColor = new CircleColor(HexColors.WHITE);
-
-    /**
-     * The box where is the text
-     */
-    private CircleColor textBoxColor = new CircleColor(HexColors.BLACK);
-
-    /**
-     * The background image
-     */
-    private Image background;
-
-    /**
      * This renderer only takes in account the drawing of circles,
      * and don't has in account the texts and the background image
      * This is useful for compare the image made by the circles
@@ -95,10 +79,9 @@ public class MultipleCircleImage extends AbstractGame {
     private Renderer populationRenderer;
 
     /**
-     * The num of circles to add each time
-     * By default 10
+     * The background image
      */
-    private int numCirclesIncrement;
+    private Image background;
 
     /**
      * This is the buffered Image composed
@@ -111,6 +94,30 @@ public class MultipleCircleImage extends AbstractGame {
      * by the circles
      */
     private double fitnessImage = 0.0;
+
+    /**
+     * The user can change the number of live
+     * circles, and this is the number of
+     * living circles to increase each time the
+     * user wants
+     * By default it's 10
+     */
+    private int circlesIncrement;
+
+    /**
+     * The text color
+     */
+    private CircleColor textColor;
+
+    /**
+     * The color of the box where is the text
+     */
+    private CircleColor textBoxColor;
+
+    /**
+     * The border of the box where is the text
+     */
+    private CircleColor textBoxStrokeColor;
 
     /**
      * A flag for showing or not showing the background image
@@ -173,10 +180,13 @@ public class MultipleCircleImage extends AbstractGame {
         }
 
         if ( splittedLine[0].equalsIgnoreCase("num-circles-increment") ) {
-            numCirclesIncrement = Integer.parseInt(splittedLine[1]);
+            circlesIncrement = Integer.parseInt(splittedLine[1]);
         }
         if ( splittedLine[0].equalsIgnoreCase("num-babies-by-circle") ) {
             population.setNumBabiesByCircle(Integer.parseInt(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("make-babies-cap") ) {
+            population.setMakeBabiesCap(Double.parseDouble(splittedLine[1]));
         }
         if ( splittedLine[0].equalsIgnoreCase("penalty-proximity") ) {
             population.setPenaltyProximity(Double.parseDouble(splittedLine[1]));
@@ -212,6 +222,26 @@ public class MultipleCircleImage extends AbstractGame {
     }
 
     /**
+     * This method manages the setting of cosmetic
+     * part of the program
+     * @param splittedLine the line with the information
+     */
+    private void setProgramCosmetics(String[] splittedLine) {
+        if ( splittedLine[0].equalsIgnoreCase("text-color") ) {
+            textColor = new CircleColor(HexColors.getHexColor(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("text-box-color") ) {
+            textBoxColor = new CircleColor(HexColors.getHexColor(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("text-box-stroke-color") ) {
+            textBoxStrokeColor = new CircleColor(HexColors.getHexColor(splittedLine[1]));
+        }
+        if ( splittedLine[0].equalsIgnoreCase("show-texts-on-screen") ) {
+            isShowingAlwaysText = splittedLine[1].equalsIgnoreCase("true");
+        }
+    }
+
+    /**
      * This method reads a text file (parameters.txt)
      * and sets all the parameters of the program
      */
@@ -222,15 +252,10 @@ public class MultipleCircleImage extends AbstractGame {
             String line = br.readLine();
             while ( line != null ) {
                 String[] splittedLine = line.split(" ");
-
                 setScreenParameters(splittedLine);
                 setPopulationParameters(splittedLine);
                 setVariationCircleImages(splittedLine);
-
-                if ( splittedLine[0].equalsIgnoreCase("show-texts-on-screen") ) {
-                    isShowingAlwaysText = splittedLine[1].equalsIgnoreCase("true");
-                }
-
+                setProgramCosmetics(splittedLine);
                 line = br.readLine();
             }
             br.close();
@@ -242,33 +267,16 @@ public class MultipleCircleImage extends AbstractGame {
 
     @Override
     public void initialize(GameContainer gameContainer) {
+        background = new Image("/david.jpg");
         population = new CircleImagePopulation();
         populationRenderer = new Renderer(gameContainer);
-        readParameters();
-        background = new Image("/david.jpg");
         buffer = populationRenderer.getP();
-        population.buildPopulation(gameContainer);
-        population.calculateCirclesScore(background);
-        population.updateCollisions(gameContainer);
-    }
 
-    /**
-     * This method calculates the fitness of the image
-     * conformed by the circles and the background
-     * @param back the background image
-     * @param front the buffer image created by the circles
-     * @return the fitness of the front image with the back image
-     */
-    private double calculateImageFitness(int[] back, int[] front) {
-        CircleColor b;
-        CircleColor f;
-        double fitness = 0.0;
-        for ( int i = 0; i < front.length; i++ ) {
-            b = new CircleColor(back[i]);
-            f = new CircleColor(front[i]);
-            fitness += f.getSimilarityAlphaAlso(b);
-        }
-        return fitness / (double) front.length;
+        readParameters();
+
+        population.buildPopulation(gameContainer);
+        population.updateCollisions(gameContainer);
+        population.calculateCirclesScore(background);
     }
 
     /**
@@ -286,15 +294,26 @@ public class MultipleCircleImage extends AbstractGame {
             isShowingCirclesScore = !isShowingCirclesScore;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_UP) ) {
-            population.getCirclePopulationLimits().addToX(numCirclesIncrement);
+            population.getCirclePopulationLimits().addToX(circlesIncrement);
             isShowingText = true;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_DOWN) ) {
             if ( population.getCirclePopulationLimits().getX() > 0 ) {
-                population.getCirclePopulationLimits().addToX(-numCirclesIncrement);
+                population.getCirclePopulationLimits().addToX(-circlesIncrement);
             }
             isShowingText = true;
         }
+    }
+
+    /**
+     * Setter for the image background
+     * If the background changes, the buffer
+     * has to change for avoid problems
+     * @param background the new background image
+     */
+    private void setBackground(Image background) {
+        this.background = background;
+        buffer = background.getP();
     }
 
     /**
@@ -305,40 +324,31 @@ public class MultipleCircleImage extends AbstractGame {
      */
     private void updateBackgroundImage(GameContainer gc) {
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD1) ) {
-            background = new Image("/colorSplash01.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/colorSplash01.jpg"));
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD2) ) {
-            background = new Image("/colorSplash02.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/colorSplash02.jpg"));
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD3) ) {
-            background = new Image("/dynastes_hercules.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/dynastes_hercules.jpg"));
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD4) ) {
-            background = new Image("/roses.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/roses.jpg"));
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD5) ) {
-            background = new Image("/stockPhoto01.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/stockPhoto01.jpg"));
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD6) ) {
-            background = new Image("/stockPhoto02.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/stockPhoto02.jpg"));
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD7) ) {
-            background = new Image("/stockPhoto03.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/stockPhoto03.jpg"));
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD8) ) {
-            background = new Image("/stockPhoto04.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/stockPhoto04.jpg"));
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD9) ) {
-            background = new Image("/universe.jpg");
-            buffer = background.getP();
+            setBackground(new Image("/universe.jpg"));
         }
     }
 
@@ -368,7 +378,7 @@ public class MultipleCircleImage extends AbstractGame {
 
         population.update(gameContainer, v, background);
 
-        fitnessImage = calculateImageFitness(background.getP(), buffer);
+        fitnessImage = BuffersFitnessCalculator.calculateImageFitness(background.getP(), buffer);
         buffer = populationRenderer.getP();
     }
 
@@ -390,9 +400,12 @@ public class MultipleCircleImage extends AbstractGame {
      */
     private void drawTexts(Renderer r) {
         r.drawFillRectangle(5, 5, 350, 75, textBoxColor.getCode());
-        r.drawRectangle(5, 5, 350, 75, textColor.getCode());
-        r.drawText("Circles alive: " + population.getCircles().size(), 10, 10, textColor.getCode());
-        r.drawText("Drawn circles: " + (population.getCircles().size() + population.getDiedCircles().size()), 10, 30, textColor.getCode());
+        r.drawRectangle(5, 5, 350, 75, textBoxStrokeColor.getCode());
+
+        r.drawText("Circles alive: " + population.getCircles().size(),
+                10, 10, textColor.getCode());
+        r.drawText("Drawn circles: " + (population.getCircles().size() + population.getDiedCircles().size()),
+                10, 30, textColor.getCode());
         r.drawText(String.format("Fitness average: %.3f%%", fitnessImage * 100), 10, 50, textColor.getCode());
     }
 
