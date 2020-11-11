@@ -93,7 +93,7 @@ public class MultipleCircleImage extends AbstractGame {
     private String screenShootPath;
 
     /**
-     * Needed time for fade of the text on screen
+     * Needed time for fade off the text on screen
      */
     private double timeToFadeOffTexts;
 
