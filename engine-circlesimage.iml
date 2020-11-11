@@ -13,15 +13,6 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$USER_HOME$/IdeaReleases/engine_gfx2d_jar.11.0.4/engine-gfx2d.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
           <root url="jar://$USER_HOME$/IdeaReleases/sengine_jar.11.0.4/sengine.jar!/" />
         </CLASSES>
         <JAVADOC />

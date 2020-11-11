@@ -6,7 +6,12 @@ import engine.gfx.Renderer;
 import engine.gfx.images.Image;
 import engine.vectors.points3d.Vec3di;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
+import java.awt.image.WritableRaster;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -79,9 +84,26 @@ public class MultipleCircleImage extends AbstractGame {
     private Renderer populationRenderer;
 
     /**
-     * The background image
+     * This are the paths where are the background images
+     * what the program uses
      */
-    private Image background;
+    private String[] backgroundsImagesPaths = new String[10];
+
+    /**
+     * The background images
+     */
+    private Image[] backgrounds;
+
+    /**
+     * The path for the screen shoots images what the
+     * program can make
+     */
+    private String screenShootPath;
+
+    /**
+     * The actual index of the image what is using the program
+     */
+    private int indexBackground = 0;
 
     /**
      * This is the buffered Image composed
@@ -242,6 +264,59 @@ public class MultipleCircleImage extends AbstractGame {
     }
 
     /**
+     * This method sets the screen shoot path
+     * @param splittedLine the line which contains all the information
+     */
+    private void setScreenShootPath(String[] splittedLine) {
+        if ( splittedLine[0].equalsIgnoreCase("screen-shoot-path") ) {
+            screenShootPath = splittedLine[1];
+        }
+    }
+
+    /**
+     * This method manages the setting of the paths where are
+     * the background images what the program is going to use
+     * @param splittedLine the line which contains all information
+     */
+    private void setBackgroundsImagesPaths(String[] splittedLine) {
+        if ( splittedLine[0].matches("image-[0-9]") ) {
+            int imageIndex = Integer.parseInt(splittedLine[0].split("-")[1]);
+            switch ( imageIndex ) {
+                case 0: default:
+                    backgrounds[0] = new Image(splittedLine[1]);
+                    break;
+                case 1:
+                    backgrounds[1] = new Image(splittedLine[1]);
+                    break;
+                case 2:
+                    backgrounds[2] = new Image(splittedLine[1]);
+                    break;
+                case 3:
+                    backgrounds[3] = new Image(splittedLine[1]);
+                    break;
+                case 4:
+                    backgrounds[4] = new Image(splittedLine[1]);
+                    break;
+                case 5:
+                    backgrounds[5] = new Image(splittedLine[1]);
+                    break;
+                case 6:
+                    backgrounds[6] = new Image(splittedLine[1]);
+                    break;
+                case 7:
+                    backgrounds[7] = new Image(splittedLine[1]);
+                    break;
+                case 8:
+                    backgrounds[8] = new Image(splittedLine[1]);
+                    break;
+                case 9:
+                    backgrounds[9] = new Image(splittedLine[1]);
+                    break;
+            }
+        }
+    }
+
+    /**
      * This method reads a text file (parameters.txt)
      * and sets all the parameters of the program
      */
@@ -255,6 +330,8 @@ public class MultipleCircleImage extends AbstractGame {
                 setScreenParameters(splittedLine);
                 setPopulationParameters(splittedLine);
                 setVariationCircleImages(splittedLine);
+                setBackgroundsImagesPaths(splittedLine);
+                setScreenShootPath(splittedLine);
                 setProgramCosmetics(splittedLine);
                 line = br.readLine();
             }
@@ -265,18 +342,51 @@ public class MultipleCircleImage extends AbstractGame {
         }
     }
 
+    /**
+     * This method sets the backgrounds array
+     * for avoid null pointer problems
+     */
+    private void initializeBackgrounds() {
+        backgrounds = new Image[10];
+        for ( int i = 0; i < backgroundsImagesPaths.length; i++ ) {
+            backgrounds[i] = new Image();
+        }
+    }
+
     @Override
     public void initialize(GameContainer gameContainer) {
-        background = new Image("/david.jpg");
         population = new CircleImagePopulation();
         populationRenderer = new Renderer(gameContainer);
         buffer = populationRenderer.getP();
+        initializeBackgrounds();
 
         readParameters();
 
         population.buildPopulation(gameContainer);
         population.updateCollisions(gameContainer);
-        population.calculateCirclesScore(background);
+        population.calculateCirclesScore(backgrounds[0]);
+    }
+
+    /**
+     * This method makes an screen shoot of the
+     * state of the circles
+     * @param gc the game container object with the window object
+     */
+    private void makeScreenShoot(GameContainer gc) {
+        File file = new File(screenShootPath + "screenShoot.jpg");
+        String imageFormat = "jpg";
+
+        BufferedImage image = new BufferedImage(gc.getWidth(), gc.getHeight(), BufferedImage.TYPE_INT_RGB);
+
+        Graphics g = image.getGraphics();
+        g.drawImage(gc.getWindow().getImage(), 0, 0, image.getWidth(), image.getHeight(), null);
+
+        try {
+            ImageIO.write(image, imageFormat, file);
+            System.out.println("Screen shoot taken");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -293,6 +403,9 @@ public class MultipleCircleImage extends AbstractGame {
         if ( gc.getInput().isKeyDown(KeyEvent.VK_S) ) {
             isShowingCirclesScore = !isShowingCirclesScore;
         }
+        if ( gc.getInput().isKeyDown(KeyEvent.VK_Q) ) {
+            makeScreenShoot(gc);
+        }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_UP) ) {
             population.getCirclePopulationLimits().addToX(circlesIncrement);
             isShowingText = true;
@@ -306,49 +419,41 @@ public class MultipleCircleImage extends AbstractGame {
     }
 
     /**
-     * Setter for the image background
-     * If the background changes, the buffer
-     * has to change for avoid problems
-     * @param background the new background image
-     */
-    private void setBackground(Image background) {
-        this.background = background;
-        buffer = background.getP();
-    }
-
-    /**
      * This method updates the user input for change the
      * background image
      * @param gc the game container object which contains
      *           the input object
      */
     private void updateBackgroundImage(GameContainer gc) {
+        if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD0) ) {
+            indexBackground = 0;
+        }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD1) ) {
-            setBackground(new Image("/colorSplash01.jpg"));
+            indexBackground = 1;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD2) ) {
-            setBackground(new Image("/colorSplash02.jpg"));
+            indexBackground = 2;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD3) ) {
-            setBackground(new Image("/dynastes_hercules.jpg"));
+            indexBackground = 3;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD4) ) {
-            setBackground(new Image("/roses.jpg"));
+            indexBackground = 4;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD5) ) {
-            setBackground(new Image("/stockPhoto01.jpg"));
+            indexBackground = 5;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD6) ) {
-            setBackground(new Image("/stockPhoto02.jpg"));
+            indexBackground = 6;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD7) ) {
-            setBackground(new Image("/stockPhoto03.jpg"));
+            indexBackground = 7;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD8) ) {
-            setBackground(new Image("/stockPhoto04.jpg"));
+            indexBackground = 8;
         }
         if ( gc.getInput().isKeyDown(KeyEvent.VK_NUMPAD9) ) {
-            setBackground(new Image("/universe.jpg"));
+            indexBackground = 9;
         }
     }
 
@@ -376,9 +481,9 @@ public class MultipleCircleImage extends AbstractGame {
         updateBackgroundImage(gameContainer);
         updateColorText();
 
-        population.update(gameContainer, v, background);
+        population.update(gameContainer, v, backgrounds[indexBackground]);
 
-        fitnessImage = BuffersFitnessCalculator.calculateImageFitness(background.getP(), buffer);
+        fitnessImage = BuffersFitnessCalculator.calculateImageFitness(backgrounds[indexBackground].getP(), buffer);
         buffer = populationRenderer.getP();
     }
 
@@ -388,7 +493,7 @@ public class MultipleCircleImage extends AbstractGame {
      */
     private void drawBackground(Renderer r) {
         if ( isShowingBackgroundImage ) {
-            r.drawImage(background, 0, 0);
+            r.drawImage(backgrounds[indexBackground], 0, 0);
         } else {
             r.clear(HexColors.WHITE);
         }

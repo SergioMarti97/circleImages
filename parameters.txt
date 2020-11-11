@@ -3,7 +3,7 @@ width 540
 height 360
 scale 2
 
-parameters
+population parameters
 min-circles 20
 max-initial-circles 500
 num-circles-increment 10
@@ -19,6 +19,21 @@ max-variation-position 10
 min-variation-position -10
 max-variation-color 10
 min-variation-color -10
+
+background images path
+image-0 /david.jpg
+image-1 /colorSplash01.jpg
+image-2 /colorSplash02.jpg
+image-3 /dynastes_hercules.jpg
+image-4 /roses.jpg
+image-5 /stockPhoto01.jpg
+image-6 /stockPhoto02.jpg
+image-7 /stockPhoto03.jpg
+image-8 /stockPhoto04.jpg
+image-9 /universe.jpg
+
+path for store the screen shoot
+screen-shoot-path C:\\Users\\Sergio\\IdeaProjects\\engine-circlesimage\\src\\resources\\
 
 program cosmetics
 text-color WHITE

@@ -7,7 +7,6 @@ import engine.gfx.HexColors;
 import engine.gfx.Renderer;
 
 import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 
 /**
  * This class is for testing the class CircleColor
