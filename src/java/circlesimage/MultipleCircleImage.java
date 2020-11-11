@@ -10,8 +10,6 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
-import java.awt.image.WritableRaster;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -65,12 +63,6 @@ public class MultipleCircleImage extends AbstractGame {
     private static final Vec3di screenDimensions = new Vec3di(540, 360, 2);
 
     /**
-     * The decrease of the alpha channel each time
-     * for the texts on screen
-     */
-    private final int TEXT_ALPHA_DECREASE = 5;
-
-    /**
      * The circles on screen what can have babies
      */
     private CircleImagePopulation population;
@@ -99,6 +91,11 @@ public class MultipleCircleImage extends AbstractGame {
      * program can make
      */
     private String screenShootPath;
+
+    /**
+     * Needed time for fade of the text on screen
+     */
+    private double timeToFadeOffTexts;
 
     /**
      * The actual index of the image what is using the program
@@ -260,6 +257,9 @@ public class MultipleCircleImage extends AbstractGame {
         }
         if ( splittedLine[0].equalsIgnoreCase("show-texts-on-screen") ) {
             isShowingAlwaysText = splittedLine[1].equalsIgnoreCase("true");
+        }
+        if ( splittedLine[0].equalsIgnoreCase("time-fade-off-text") ) {
+            timeToFadeOffTexts = Double.parseDouble(splittedLine[1]);
         }
     }
 
@@ -461,16 +461,22 @@ public class MultipleCircleImage extends AbstractGame {
      * This method updates the color
      * text, for make a more beautiful transition
      * when the texts are updated
+     * @param elapsedTime the time elapsed between frames
      */
-    private void updateColorText() {
+    private void updateColorText(float elapsedTime) {
+        assert elapsedTime != 0;
+        int alphaDecrease = (int) (timeToFadeOffTexts / (elapsedTime * 255));
+
         if ( isShowingText ) {
-            if ( textColor.getAlpha() <= TEXT_ALPHA_DECREASE) {
+            if ( textColor.getAlpha() <= alphaDecrease) {
                 textColor.setAlpha(255);
                 textBoxColor.setAlpha(255);
+                textBoxStrokeColor.setAlpha(255);
                 isShowingText = false;
             } else {
                 textColor.setAlpha(textColor.getAlpha() - 1);
                 textBoxColor.setAlpha(textBoxColor.getAlpha() - 1);
+                textBoxStrokeColor.setAlpha(textBoxStrokeColor.getAlpha() - 1);
             }
         }
     }
@@ -479,7 +485,7 @@ public class MultipleCircleImage extends AbstractGame {
     public void update(GameContainer gameContainer, float v) {
         updateUserInput(gameContainer);
         updateBackgroundImage(gameContainer);
-        updateColorText();
+        updateColorText(v);
 
         population.update(gameContainer, v, backgrounds[indexBackground]);
 

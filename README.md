@@ -9,5 +9,5 @@ because it mixes my two big loves: biology and computer science.</p>
 
 ## Controls
 <p>Press <i>space</i> for re-start the circles, press <i>'s'</i> for show the score of each
-circle, <i>'b'</i> to visualise the image on the background, and arrows <i>up</i> and <i>down</i>
-for increase or decrease the number of living circles.</p>
+circle, <i>'b'</i> to visualise the image on the background, <i>'q'</i> for take a screen shoot, 
+and arrows <i>up</i> and <i>down</i> for increase or decrease the number of living circles.</p>

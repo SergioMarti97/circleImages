@@ -40,3 +40,4 @@ text-color WHITE
 text-box-color BLACK
 text-box-stroke-color WHITE
 show-texts-on-screen FALSE
+time-fade-off-text 1.0
